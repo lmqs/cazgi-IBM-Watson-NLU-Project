@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-function getNLUInstance(){
+function getNLUInstance() {
 
     let api_key = process.env.API_KEY;
     let api_url = process.env.API_URL;
@@ -16,8 +16,29 @@ function getNLUInstance(){
             apikey: api_key,
         }),
         serviceUrl: api_url,
-        });
+    });
     return naturalLanguageUnderstanding;
+}
+
+
+
+function getParam(text, url, sentiment, emotion) {
+    let analyzeParams = {
+        'features': {
+            'keywords': {
+                'emotion': emotion,
+                'sentiment': sentiment,
+                'limit': 5,
+            },
+        },
+    };
+    if (text) {
+        analyzeParams.text = text;
+    }
+    if (url) {
+        analyzeParams.url = url;
+    }
+    return analyzeParams;
 }
 
 
@@ -26,25 +47,104 @@ app.use(express.static('client'))
 const cors_app = require('cors');
 app.use(cors_app());
 
-app.get("/",(req,res)=>{
+app.get("/", (req, res) => {
     res.render('index.html');
-  });
-
-app.get("/url/emotion", (req,res) => {
-
-    return res.send({"happy":"90","sad":"10"});
 });
 
-app.get("/url/sentiment", (req,res) => {
-    return res.send("url sentiment for "+req.query.url);
+function setJsonResultEmotion(analysisResults, sentiment, emotion) {
+    let temp = { result: [] };
+    let resp = analysisResults.result.keywords;
+    for (i in resp) {
+        temp.result.push({
+            text: resp[i].text,
+        });
+        if (emotion) {
+            temp.result.push({
+                emotion: resp[i].emotion
+            });
+        }
+
+        if (sentiment) {
+            temp.result.push({
+                sentiment: resp[i].sentiment
+            });
+        }
+
+    }
+    return temp;
+}
+
+app.get("/url/emotion", async (req, res) => {
+    let json = { error: '', result: [] };
+    if (!req.query.url) {
+        json.error = 'Please fill in the url.';
+        return res.send(json);
+    }
+    let params = getParam('', req.query.url, false, true);
+    let naturalLanguageUnderstanding = getNLUInstance()
+    let analysisResults = await naturalLanguageUnderstanding.analyze(params);
+    if (analysisResults) {
+        json.result = setJsonResultEmotion(analysisResults, false, true).result;
+    } else {
+        json.error = 'Erro';
+    }
+    return res.send(json);
 });
 
-app.get("/text/emotion", (req,res) => {
-    return res.send({"happy":"10","sad":"90"});
+app.get("/url/sentiment", async (req, res) => {
+    let json = { error: '', result: [] };
+    if (!req.query.url) {
+        json.error = 'Please fill in the url.';
+        return res.send(json);
+    }
+    let naturalLanguageUnderstanding = getNLUInstance()
+    let params = getParam('', req.query.url, true, false);
+
+    let analysisResults = await naturalLanguageUnderstanding.analyze(params);
+    if (analysisResults) {
+        json.result = setJsonResultEmotion(analysisResults, true, false).result;
+    } else {
+        json.error = 'Erro';
+    }
+    return res.send(json);
 });
 
-app.get("/text/sentiment", (req,res) => {
-    return res.send("text sentiment for "+req.query.text);
+app.get("/text/emotion", async (req, res) => {
+    let json = { error: '', result: [] };
+    if (!req.query.text) {
+        json.error = 'Please fill in the text.';
+        return res.send(json);
+    }
+    let naturalLanguageUnderstanding = getNLUInstance()
+    let params = getParam(req.query.text, '', false, true);
+    let analysisResults = await naturalLanguageUnderstanding.analyze(params);
+
+    if (analysisResults) {
+        json.result = setJsonResultEmotion(analysisResults, false, true).result;
+    } else {
+        json.error = 'Erro';
+    }
+    return res.send(json);
+});
+
+
+
+app.get("/text/sentiment", async (req, res) => {
+    let json = { error: '', result: [] };
+    if (!req.query.text) {
+        json.error = 'Please fill in the text.';
+        return res.send(json);
+    }
+    let naturalLanguageUnderstanding = getNLUInstance()
+    let params = getParam(req.query.text, '', true, false);
+
+    let analysisResults = await naturalLanguageUnderstanding.analyze(params);
+    if (analysisResults) {
+        json.result = setJsonResultEmotion(analysisResults, true, false).result;
+    } else {
+        json.error = 'Erro';
+    }
+    return res.send(json);
 });
 
 let server = app.listen(8080, () => {
