@@ -28,7 +28,7 @@ function getParam(text, url, sentiment, emotion) {
             'keywords': {
                 'emotion': emotion,
                 'sentiment': sentiment,
-                'limit': 5,
+                'limit': 2,
             },
         },
     };
@@ -55,22 +55,30 @@ function setJsonResultEmotion(analysisResults, sentiment, emotion) {
     let temp = { result: [] };
     let resp = analysisResults.result.keywords;
     for (i in resp) {
+        let resultado = [];
+
+        if (emotion) {
+            let emotionJson = resp[i].emotion;
+            for (var j in emotionJson) {
+                resultado.push([j, emotionJson[j]]);
+            }
+        }
+        if (sentiment) {
+            let sentimentJson = resp[i].sentiment;
+            for (var j in sentimentJson) {
+                resultado.push([j, sentimentJson[j]]);
+            }
+
+        }
         temp.result.push({
             text: resp[i].text,
+            emotion: resp[i].emotion,
+            emotions: resultado,
+            sentiment: resp[i].sentiment,
+            sentiments: resultado
         });
-        if (emotion) {
-            temp.result.push({
-                emotion: resp[i].emotion
-            });
-        }
-
-        if (sentiment) {
-            temp.result.push({
-                sentiment: resp[i].sentiment
-            });
-        }
-
     }
+
     return temp;
 }
 
